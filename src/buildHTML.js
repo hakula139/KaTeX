@@ -313,7 +313,11 @@ function buildHTMLUnbreakable(children, options) {
  * Take an entire parse tree, and build it into an appropriate set of HTML
  * nodes.
  */
-export default function buildHTML(tree: AnyParseNode[], options: Options): DomSpan {
+export default function buildHTML(
+    tree: AnyParseNode[],
+    options: Options,
+    inDisplayMode: boolean,
+): DomSpan {
     // Strip off outer tag wrapper for processing below.
     let tag = null;
     if (tree.length === 1 && tree[0].type === "tag") {
@@ -377,6 +381,11 @@ export default function buildHTML(tree: AnyParseNode[], options: Options): DomSp
         children.push(buildHTMLUnbreakable(parts, options));
     }
 
+    // KaTeX display mode uses flexbox CSS. Insert "glue", i.e. flex-grow: 1;
+    const htmlChildren = inDisplayMode
+        ? [makeSpan(["glue"], []), makeSpan([], children), makeSpan(["glue"], [])]
+        : children;
+
     // Now, if there was a tag, build it too and append it as a final child.
     let tagChild;
     if (tag) {
@@ -384,12 +393,12 @@ export default function buildHTML(tree: AnyParseNode[], options: Options): DomSp
             buildExpression(tag, options, true)
         );
         tagChild.classes = ["tag"];
-        children.push(tagChild);
+        htmlChildren.push(tagChild);
     } else if (eqnNum) {
-        children.push(eqnNum);
+        htmlChildren.push(eqnNum);
     }
 
-    const htmlNode = makeSpan(["katex-html"], children);
+    const htmlNode = makeSpan(["katex-html"], htmlChildren);
     htmlNode.setAttribute("aria-hidden", "true");
 
     // Adjust the strut of the tag to be the maximum height of all children
